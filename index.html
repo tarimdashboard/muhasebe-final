@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b132b" />
+  <title>Muhasebe PWA v13 - Mali Tarım</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">MT</div>
+      <div>
+        <div class="title">Muhasebe PWA v13</div>
+        <div class="subtitle">Sezon bazlı tarımsal finans (2020 → ∞)</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost" id="btnExport">Dışa Aktar</button>
+      <button class="btn ghost" id="btnImport">İçe Aktar</button>
+      <input type="file" id="importFile" accept="application/json" hidden />
+      <button class="btn danger" id="btnReset">Sıfırla</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="cards" id="summaryCards">
+      <div class="card">
+        <div class="card-h">Çiftlik Net Bakiye</div>
+        <div class="card-v" id="sumNet">₺0</div>
+        <div class="card-s">Seçili aralık + filtreye göre</div>
+      </div>
+      <div class="card">
+        <div class="card-h">Toplam Gelir</div>
+        <div class="card-v" id="sumIncome">₺0</div>
+        <div class="card-s">Tarla + Zeytin gelirleri</div>
+      </div>
+      <div class="card">
+        <div class="card-h">Toplam Gider</div>
+        <div class="card-v" id="sumExpense">₺0</div>
+        <div class="card-s">Tarla + Ev + Kişisel + Finans</div>
+      </div>
+      <div class="card subtle">
+        <div class="card-h">Bayi (Ayrı)</div>
+        <div class="card-v" id="sumBayi">₺0</div>
+        <div class="card-s">Tek bakiyeye karışmaz</div>
+      </div>
+    </section>
+
+    <!-- Views -->
+    <section class="view" id="view-kayit">
+      <h2>Kayıt Ekle</h2>
+
+      <div class="grid2">
+        <div class="panel">
+          <h3>Gelir</h3>
+          <form id="formIncome" class="form">
+            <div class="row">
+              <label>Sezon Yılı</label>
+              <input type="number" min="1900" max="2100" value="2025" id="incSeason" required />
+            </div>
+            <div class="row">
+              <label>Ürün</label>
+              <select id="incProduct" required></select>
+            </div>
+            <div class="row">
+              <label>Gelir Türü</label>
+              <select id="incSub" required></select>
+            </div>
+            <div class="row">
+              <label>Tarih</label>
+              <input type="date" id="incDate" required />
+            </div>
+            <div class="row">
+              <label>Miktar (kg)</label>
+              <input inputmode="decimal" placeholder="örn: 1250,5" id="incQty" />
+            </div>
+            <div class="row">
+              <label>Birim Fiyat (₺/kg)</label>
+              <input inputmode="decimal" placeholder="örn: 18,75" id="incUnit" />
+            </div>
+            <div class="row">
+              <label>Toplam (₺)</label>
+              <input inputmode="decimal" id="incTotal" required />
+              <small>İstersen direkt toplam da girebilirsin.</small>
+            </div>
+            <div class="row">
+              <label>Açıklama</label>
+              <input id="incNote" placeholder="örn: TMO, tüccar, salamura vs." />
+            </div>
+            <button class="btn primary" type="submit">Geliri Kaydet</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3>Gider</h3>
+          <form id="formExpense" class="form">
+            <div class="row">
+              <label>Sezon Yılı</label>
+              <input type="number" min="1900" max="2100" value="2025" id="expSeason" required />
+            </div>
+            <div class="row">
+              <label>Ürün</label>
+              <select id="expProduct" required></select>
+            </div>
+            <div class="row">
+              <label>Kategori</label>
+              <select id="expCat" required></select>
+            </div>
+            <div class="row">
+              <label>Alt Kategori</label>
+              <select id="expSub" required></select>
+            </div>
+            <div class="row">
+              <label>Tarih</label>
+              <input type="date" id="expDate" required />
+            </div>
+
+            <div class="row" id="unitRow">
+              <label>Birim</label>
+              <select id="expUnit"></select>
+            </div>
+            <div class="row" id="qtyRow">
+              <label>Miktar</label>
+              <input inputmode="decimal" id="expQty" placeholder="örn: 0,5" />
+            </div>
+            <div class="row" id="priceRow">
+              <label>Birim Fiyat (₺)</label>
+              <input inputmode="decimal" id="expUnitPrice" placeholder="örn: 8500" />
+            </div>
+
+            <div class="row">
+              <label>Toplam (₺)</label>
+              <input inputmode="decimal" id="expTotal" required />
+              <small>İlaçta miktar yok: direkt toplam gir.</small>
+            </div>
+
+            <div class="row hidden" id="laborBlock">
+              <label>İşçilik Detayı</label>
+              <div class="laborGrid">
+                <div>
+                  <span class="mini">Gün</span>
+                  <input inputmode="decimal" id="labDays" placeholder="örn: 2,5" />
+                </div>
+                <div>
+                  <span class="mini">Kişi</span>
+                  <input inputmode="numeric" id="labPeople" placeholder="örn: 5" />
+                </div>
+                <div>
+                  <span class="mini">Günlük Ücret</span>
+                  <input inputmode="decimal" id="labWage" placeholder="örn: 800" />
+                </div>
+              </div>
+              <div class="row">
+                <label>Yapılan İş</label>
+                <select id="labWork"></select>
+              </div>
+            </div>
+
+            <div class="row">
+              <label>Açıklama</label>
+              <input id="expNote" placeholder="örn: firmadan kimden aldın vs." />
+            </div>
+            <button class="btn primary" type="submit">Gideri Kaydet</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Son Kayıtlar</h3>
+        <div class="filters">
+          <input id="qSearch" placeholder="Ara (not, cari, ürün...)" />
+          <select id="qType">
+            <option value="all">Hepsi</option>
+            <option value="income">Gelir</option>
+            <option value="expense">Gider</option>
+            <option value="bayi">Bayi</option>
+          </select>
+          <input type="number" id="qSeasonFrom" min="1900" max="2100" value="2020" />
+          <input type="number" id="qSeasonTo" min="1900" max="2100" value="2026" />
+          <button class="btn" id="btnApply">Uygula</button>
+        </div>
+        <div class="tableWrap">
+          <table class="table" id="tblTx">
+            <thead>
+              <tr>
+                <th>Tarih</th>
+                <th>Sezon</th>
+                <th>Ürün</th>
+                <th>Tip</th>
+                <th>Kategori</th>
+                <th>Alt</th>
+                <th class="right">Tutar</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="hint">Not: Bayi kayıtları tek bakiye içine dahil edilmez.</div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-cari">
+      <h2>Cari / Borç - Alacak</h2>
+      <div class="panel">
+        <div class="hint">Cari ödeme <b>tek bakiyeden düşmez</b>. (Gider zaten faturada işlendi.) Ödeme sadece borcu kapatır.</div>
+        <form id="formCari" class="form">
+          <div class="grid3">
+            <div class="row">
+              <label>Sezon Yılı</label>
+              <input type="number" id="cSeason" min="1900" max="2100" value="2025" required />
+            </div>
+            <div class="row">
+              <label>Cari Adı</label>
+              <input id="cName" placeholder="Boş bırakabilirsin" list="cariList" />
+              <datalist id="cariList"></datalist>
+            </div>
+            <div class="row">
+              <label>Tür</label>
+              <select id="cType">
+                <option value="borc">Borç</option>
+                <option value="alacak">Alacak</option>
+              </select>
+            </div>
+            <div class="row">
+              <label>Bağlı Ürün (ops.)</label>
+              <select id="cProduct"></select>
+            </div>
+            <div class="row">
+              <label>Alt Kalem</label>
+              <select id="cSub"></select>
+            </div>
+            <div class="row">
+              <label>Tutar (₺)</label>
+              <input inputmode="decimal" id="cAmount" required />
+            </div>
+            <div class="row">
+              <label>Vade</label>
+              <input type="date" id="cDue" />
+            </div>
+            <div class="row">
+              <label>Açıklama</label>
+              <input id="cNote" placeholder="kimden/niye" />
+            </div>
+          </div>
+          <button class="btn primary" type="submit">Cari Kaydet</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>Açık Borçlar / Alacaklar</h3>
+        <div class="filters">
+          <input id="cSearch" placeholder="Ara (cari adı/alt kalem/not)" />
+          <button class="btn" id="btnCariRefresh">Yenile</button>
+        </div>
+        <div class="tableWrap">
+          <table class="table" id="tblCari">
+            <thead>
+              <tr>
+                <th>Sezon</th>
+                <th>Cari</th>
+                <th>Tür</th>
+                <th>Alt</th>
+                <th class="right">Toplam</th>
+                <th class="right">Ödenen</th>
+                <th class="right">Kalan</th>
+                <th>Vade</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="panel subtle">
+          <h3>Ödeme Yap</h3>
+          <div class="grid2">
+            <div class="row">
+              <label>Cari Seç</label>
+              <select id="paySelect"></select>
+            </div>
+            <div class="row">
+              <label>Ödeme Tutarı (₺)</label>
+              <input inputmode="decimal" id="payAmount" />
+            </div>
+            <div class="row">
+              <label>Tarih</label>
+              <input type="date" id="payDate" />
+            </div>
+            <div class="row">
+              <label>Not</label>
+              <input id="payNote" placeholder="çek, havale vs." />
+            </div>
+          </div>
+          <button class="btn primary" id="btnPay">Seçili Borca Ödeme</button>
+          <div class="hint">Bu ödeme raporda “Finans/Nakit çıkışı” olarak görünür; gideri tekrar düşmez.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-cek">
+      <h2>Çek / Senet</h2>
+      <div class="panel">
+        <form id="formCek" class="form">
+          <div class="grid3">
+            <div class="row">
+              <label>Sezon Yılı</label>
+              <input type="number" id="cekSeason" min="1900" max="2100" value="2025" required />
+            </div>
+            <div class="row">
+              <label>Tip</label>
+              <select id="cekType">
+                <option value="cek-verilen">Çek (Verilen)</option>
+                <option value="cek-alinan">Çek (Alınan)</option>
+                <option value="senet-verilen">Senet (Verilen)</option>
+                <option value="senet-alinan">Senet (Alınan)</option>
+              </select>
+            </div>
+            <div class="row">
+              <label>Cari (ops.)</label>
+              <input id="cekCari" placeholder="isteğe bağlı" list="cariList2"/>
+              <datalist id="cariList2"></datalist>
+            </div>
+            <div class="row">
+              <label>Tutar (₺)</label>
+              <input inputmode="decimal" id="cekAmount" required />
+            </div>
+            <div class="row">
+              <label>Vade</label>
+              <input type="date" id="cekDue" />
+            </div>
+            <div class="row">
+              <label>Durum</label>
+              <select id="cekStatus">
+                <option value="bekliyor">Bekliyor</option>
+                <option value="odendi">Ödendi</option>
+                <option value="tahsil">Tahsil Edildi</option>
+              </select>
+            </div>
+            <div class="row">
+              <label>Açıklama</label>
+              <input id="cekNote" />
+            </div>
+          </div>
+          <button class="btn primary" type="submit">Kaydet</button>
+        </form>
+      </div>
+
+      <div class="panel">
+        <h3>Liste</h3>
+        <div class="tableWrap">
+          <table class="table" id="tblCek">
+            <thead>
+              <tr>
+                <th>Sezon</th>
+                <th>Tip</th>
+                <th>Cari</th>
+                <th class="right">Tutar</th>
+                <th>Vade</th>
+                <th>Durum</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-rapor">
+      <h2>Rapor</h2>
+
+      <div class="panel">
+        <div class="grid4">
+          <div class="row">
+            <label>Başlangıç Sezon</label>
+            <input type="number" id="rFrom" min="1900" max="2100" value="2020" />
+          </div>
+          <div class="row">
+            <label>Bitiş Sezon</label>
+            <input type="number" id="rTo" min="1900" max="2100" value="2026" />
+          </div>
+          <div class="row">
+            <label>Ürün</label>
+            <select id="rProduct"></select>
+          </div>
+          <div class="row">
+            <label>Mod</label>
+            <select id="rMode">
+              <option value="summary">Özet</option>
+              <option value="category">Kategori</option>
+              <option value="subcat">Alt Kategori (yıllara böl)</option>
+            </select>
+          </div>
+          <div class="row">
+            <label>Kategori</label>
+            <select id="rCat"></select>
+          </div>
+          <div class="row">
+            <label>Alt Kategori</label>
+            <select id="rSub"></select>
+          </div>
+          <div class="row">
+            <label>Tip</label>
+            <select id="rType">
+              <option value="all">Hepsi</option>
+              <option value="income">Gelir</option>
+              <option value="expense">Gider</option>
+              <option value="finance">Finans (Ödeme)</option>
+            </select>
+          </div>
+          <div class="row">
+            <label>&nbsp;</label>
+            <button class="btn primary" id="btnRunReport">Raporla</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3 id="reportTitle">Sonuç</h3>
+        <div class="reportGrid" id="reportCards"></div>
+        <div class="tableWrap">
+          <table class="table" id="tblReport">
+            <thead><tr id="repHead"></tr></thead>
+            <tbody id="repBody"></tbody>
+          </table>
+        </div>
+        <div class="hint">Bayi raporu ayrı ekranda (tek bakiye içine karışmaz).</div>
+      </div>
+    </section>
+
+    <section class="view hidden" id="view-bayi">
+      <h2>Bayi (Ayrı)</h2>
+      <div class="panel">
+        <div class="hint"><b>Bayi tek bakiyeye dahil değildir.</b> Buradaki kar/zarar ayrı görünür.</div>
+        <form id="formBayi" class="form">
+          <div class="grid3">
+            <div class="row">
+              <label>Sezon Yılı</label>
+              <input type="number" id="bSeason" min="1900" max="2100" value="2025" required />
+            </div>
+            <div class="row">
+              <label>Tür</label>
+              <select id="bType">
+                <option value="income">Bayi Satış (Gelir)</option>
+                <option value="expense">Bayi Alım/Masraf (Gider)</option>
+              </select>
+            </div>
+            <div class="row">
+              <label>Tutar (₺)</label>
+              <input inputmode="decimal" id="bAmount" required />
+            </div>
+            <div class="row">
+              <label>Tarih</label>
+              <input type="date" id="bDate" required />
+            </div>
+            <div class="row">
+              <label>Açıklama</label>
+              <input id="bNote" />
+            </div>
+          </div>
+          <button class="btn primary" type="submit">Kaydet</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h3>Liste</h3>
+        <div class="tableWrap">
+          <table class="table" id="tblBayi">
+            <thead><tr><th>Tarih</th><th>Sezon</th><th>Tür</th><th class="right">Tutar</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-go="kayit">Kayıt</button>
+    <button class="nav-item" data-go="cari">Cari</button>
+    <button class="nav-item" data-go="cek">Çek/Senet</button>
+    <button class="nav-item" data-go="rapor">Rapor</button>
+    <button class="nav-item" data-go="bayi">Bayi</button>
+  </nav>
+
+  <script src="./app.js"></script>
+</body>
+</html>
